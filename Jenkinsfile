@@ -107,15 +107,5 @@ pipeline {
         }
     }
 
-    post {
-        failure {
-            emailext body: 'The deployment of Flask App failed. Please check the Jenkins console for details.',
-                     subject: 'Flask App Deployment Failed',
-                     to: "${EMAIL_NOTIFICATION}"
-        }
-
-        always {
-            sh 'docker logout'
-        }
-    }
+    
 }
