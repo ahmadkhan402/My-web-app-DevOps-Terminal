@@ -1,18 +1,25 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE_NAME = "ahmadkhan402/terminal-web-app"
+        DOCKER_IMAGE_TAG = "${env.BUILD_ID}"
+        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
+    }
+
     stages {
         stage('Build') {
             steps {
                 script {
-                    dockerImage = docker.build("ahmadkhan402/terminal-web-app:${env.BUILD_ID}")
+                    dockerImage = docker.build("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
                 }
             }
         }
+
         stage('Push') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
                         dockerImage.push()
                     }
                 }
@@ -21,28 +28,20 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'ls -l index.html' 
+                sh 'ls -l index.html'
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    sshPublisher(
-                        publishers: [
-                            sshPublisherDesc(
-                                configName: "MyUbuntuServer", 
-                                transfers: [sshTransfer(
-                                    execCommand: """
-                                        docker push ahmadkhan402/terminal-web-app:${env.BUILD_ID}
-                                        docker stop ahmadkhan402/terminal-web-app || true
-                                        docker rm ahmadkhan402/terminal-web-app || true
-                                        docker run -d --name ahmadkhan402/terminal-web-app -p 80:80 ahmadkhan402/terminal-web-app:${env.BUILD_ID}
-                                    """
-                                )]
-                            )
-                        ]
-                    )
+                    // Tag current image as backup (previous)
+                    sh "docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:previous || true"
+                    // Push the new image and deploy
+                    sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
+                    sh "docker stop ${DOCKER_IMAGE_NAME} || true"
+                    sh "docker rm ${DOCKER_IMAGE_NAME} || true"
+                    sh "docker run -d --name ${DOCKER_IMAGE_NAME} -p 80:80 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
                 }
             }
         }
