@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -12,7 +13,7 @@ pipeline {
         stage('Push') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-cred') {
+                    docker.withRegistry('https://registry.hub.docker.com', 'ocker-cred') {
                         dockerImage.push()
                     }
                 }
@@ -21,13 +22,14 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'ls -l index.html' 
+                sh 'ls -l index.html' // Simple check for index.html
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
+                    // Deploy the new version
                     sshPublisher(
                         publishers: [
                             sshPublisherDesc(
@@ -43,8 +45,11 @@ pipeline {
                             )
                         ]
                     )
+                }
+            }
+        }
+    }
 
-                    
     post {
         failure {
             mail(
@@ -55,4 +60,3 @@ pipeline {
         }
     }
 }
-            }}
