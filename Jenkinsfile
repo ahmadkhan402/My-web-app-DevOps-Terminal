@@ -1,3 +1,5 @@
+@Library('docker') _
+
 pipeline {
     agent any
 
@@ -23,3 +25,4 @@ pipeline {
         }
     }
 }
+
