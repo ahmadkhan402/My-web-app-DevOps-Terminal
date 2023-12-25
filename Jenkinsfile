@@ -1,32 +1,60 @@
-
 pipeline {
     agent any
-    
-    environment {
-        DOCKER_REGISTRY = "ahmadkhan402/terminal-web-app"
-        IMAGE_NAME = "terminal-web-app"
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
-    }
 
     stages {
-        stage('Build Docker Image') {
+        stage('Build') {
             steps {
                 script {
-                    def dockerImage = docker.build("${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")
+                    dockerImage = docker.build("ahmadkhan402/terminal-web-app:${env.BUILD_ID}")
                 }
             }
         }
-
-        stage('Push to Docker Hub') {
+        stage('Push') {
             steps {
                 script {
-                    docker.withRegistry('', "${DOCKER_HUB_CREDENTIALS}") {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
                         dockerImage.push()
                     }
                 }
             }
         }
+
+        stage('Test') {
+            steps {
+                sh 'ls -l index.html' 
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    sshPublisher(
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: "MyUbuntuServer", 
+                                transfers: [sshTransfer(
+                                    execCommand: """
+                                        docker push ahmadkhan402/terminal-web-app:${env.BUILD_ID}
+                                        docker stop ahmadkhan402/terminal-web-app || true
+                                        docker rm ahmadkhan402/terminal-web-app || true
+                                        docker run -d --name ahmadkhan402/terminal-web-app -p 80:80 ahmadkhan402/terminal-web-app:${env.BUILD_ID}
+                                    """
+                                )]
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail(
+                to: 'ahmadsafiullah777@gmail.com',
+                subject: "Failed Pipeline: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: "Something is wrong with the build ${env.BUILD_URL}"
+            )
+        }
     }
 }
-
