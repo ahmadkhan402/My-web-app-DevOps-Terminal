@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -6,10 +5,11 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    dockerImage = docker.build("ahmadkhan402/terminal-web-app:${env.BUILD_ID}")
+                    def dockerImage = docker.build("ahmadkhan402/terminal-web-app:${env.BUILD_ID}")
                 }
             }
         }
+
         stage('Push') {
             steps {
                 script {
@@ -22,7 +22,7 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'ls -l index.html' 
+                sh 'ls -l index.html'
             }
         }
 
@@ -44,9 +44,11 @@ pipeline {
                             )
                         ]
                     )
-
                 } 
-            }      
+            }
+        }
+    }
+
     post {
         failure {
             mail(
