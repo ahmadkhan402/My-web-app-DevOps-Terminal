@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE_NAME = "ahmadkhan402/terminal-web-app"
         DOCKER_IMAGE_TAG = "${env.BUILD_ID}"
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials-id')
+        DOCKER_HUB_CREDENTIALS = credentials('dckr_pat_gDxTK39Qd1rM5HW65V-2G-vTvTQ')
     }
 
     stages {
