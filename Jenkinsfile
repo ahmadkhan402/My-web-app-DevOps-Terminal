@@ -1,25 +1,19 @@
+
 pipeline {
     agent any
-
-    environment {
-        DOCKER_IMAGE_NAME = "ahmadkhan402/terminal-web-app"
-        DOCKER_IMAGE_TAG = "${env.BUILD_ID}"
-        DOCKER_HUB_CREDENTIALS = credentials('dckr_pat_gDxTK39Qd1rM5HW65V-2G-vTvTQ')
-    }
 
     stages {
         stage('Build') {
             steps {
                 script {
-                    dockerImage = docker.build("${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}")
+                    dockerImage = docker.build("ahmadkhan402/terminal-web-app:${env.BUILD_ID}")
                 }
             }
         }
-
         stage('Push') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIALS) {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
                         dockerImage.push()
                     }
                 }
@@ -28,30 +22,38 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'ls -l index.html'
+                sh 'ls -l index.html' 
             }
         }
 
         stage('Deploy') {
             steps {
                 script {
-                    // Tag current image as backup (previous)
-                    sh "docker tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} ${DOCKER_IMAGE_NAME}:previous || true"
-                    // Push the new image and deploy
-                    sh "docker push ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-                    sh "docker stop ${DOCKER_IMAGE_NAME} || true"
-                    sh "docker rm ${DOCKER_IMAGE_NAME} || true"
-                    sh "docker run -d --name ${DOCKER_IMAGE_NAME} -p 80:80 ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-                }
-            }
-        }
-    }
+                    sshPublisher(
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: "MyUbuntuServer", 
+                                transfers: [sshTransfer(
+                                    execCommand: """
+                                        docker pull ahmadkhan402/terminal-web-app:${env.BUILD_ID}
+                                        docker stop terminal-web-app || true
+                                        docker rm terminal-web-app || true
+                                        docker run -d --name terminal-web-app -p 80:80 ahmadkhan402/terminal-web-app:${env.BUILD_ID}
+                                    """
+                                )]
+                            )
+                        ]
+                    )
 
+                } 
+            }      
     post {
         failure {
-            emailext body: "Something is wrong with the build ${env.BUILD_URL}",
-                 subject: "Failed Pipeline: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-                 to: 'ahmadsafiullah777@gmail.com'
+            mail(
+                to: 'ahmadsafiullah777@gmail.com',
+                subject: "Failed Pipeline: ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: "Something is wrong with the build ${env.BUILD_URL}"
+            )
         }
     }
 }
