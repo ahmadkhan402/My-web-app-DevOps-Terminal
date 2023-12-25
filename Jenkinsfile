@@ -13,7 +13,7 @@ pipeline {
         stage('Push') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'ocker-cred') {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-cred') {
                         dockerImage.push()
                     }
                 }
